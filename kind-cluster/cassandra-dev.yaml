@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: dev
+  name: cassandra-dev
+  labels:
+    app: cassandra-dev
+spec:
+  containers:
+  - name: cassandra-dev
+    image: docker.io/k8ssandra/cass-management-api:4.0.1
+    imagePullPolicy: IfNotPresent
+    command: [ "sleep" ]
+    args: [ "infinity" ]
+    volumeMounts:
+    - mountPath: /shared-data
+      name: shared-data-volume
+  volumes:
+  - name: shared-data-volume
+    hostPath:
+      # directory location on host
+      path: /shared-data
+      # this field is optional
+      type: Directory

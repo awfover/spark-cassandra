@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: java-dev
+  labels:
+    app: java-dev
+spec:
+  containers:
+  - name: java-dev
+    image: openjdk:11-jre-slim
+    imagePullPolicy: IfNotPresent
+    command: [ "sleep" ]
+    args: [ "infinity" ]
+    volumeMounts:
+    - mountPath: /shared-data
+      name: shared-data-volume
+  volumes:
+  - name: shared-data-volume
+    hostPath:
+      # directory location on host
+      path: /shared-data
+      # this field is optional
+      type: Directory

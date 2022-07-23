@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: spark-sql
+  namespace: spark
+  labels:
+    app: spark-sql
+spec:
+  serviceName: spark-sql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-sql
+  template:
+    metadata:
+      labels:
+        app: spark-sql
+    spec:
+      terminationGracePeriodSeconds: 1800
+      containers:
+      - name: spark-history-server
+        image: localhost:5000/spark-cassandra:local
+        imagePullPolicy: Always
+        env:
+        - name: SPARK_HISTORY_OPTS
+          value: -Dspark.history.fs.logDirectory=/spark-log
+        args:
+          - /opt/spark/bin/spark-class
+          - org.apache.spark.deploy.history.HistoryServer
+        ports:
+          - containerPort: 18080
+            name: spark-history
+            protocol: TCP
+        volumeMounts:
+        - mountPath: /spark-log
+          name: spark-log-volume
+      - name: spark-thrift-server
+        image: localhost:5000/spark-cassandra:local
+        imagePullPolicy: Always
+        env:
+          - name: CASSANDRA_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: demo-superuser
+                key: username
+                optional: true
+          - name: CASSANDRA_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: demo-superuser
+                key: password
+                optional: true
+        args:
+          - /opt/spark/sbin/start-spark-sql.sh
+          - --master
+          - k8s://https://kubernetes.default.svc:443
+          - --class
+          - org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
+          - --deploy-mode
+          - client
+          - --name
+          - spark-sql
+          - --hiveconf
+          - hive.server2.thrift.port 10000
+          - --hiveconf
+          - hive.server2.thrift.http.port 10001
+          - --conf
+          - spark.dynamicAllocation.shuffleTracking.enabled=true
+          - --conf
+          - spark.dynamicAllocation.enabled=true
+          - --conf
+          - spark.dynamicAllocation.initialExecutors=1
+          - --conf
+          - spark.dynamicAllocation.maxExecutors=3
+          - --conf
+          - spark.executor.memory=1G
+          - --conf
+          - spark.executor.cores=1
+          - --conf
+          - spark.kubernetes.namespace=spark
+          - --conf
+          - spark.kubernetes.container.image=localhost:5000/spark-cassandra:local
+          - --conf
+          - spark.kubernetes.authenticate.driver.serviceAccountName=spark
+          - --conf
+          - spark.cassandra.connection.host=demo-dc1-service.k8ssandra-operator
+          - --conf
+          - spark.sql.catalog.cassandra=com.datastax.spark.connector.datasource.CassandraCatalog
+          - --conf
+          - spark.sql.extensions=com.datastax.spark.connector.CassandraSparkExtensions
+          - --conf
+          - spark.eventLog.enabled=true
+          - --conf
+          - spark.eventLog.dir=/spark-log
+          - --conf
+          - spark.kubernetes.executor.enable.localityPreferences=false
+          - --conf
+          - spark.kubernetes.resourceResolverMode=off
+          - --conf
+          - spark.cassandra.sql.execution.batchscan.reuse=false
+          - --conf
+          - spark.cassandra.sql.execution.batchscan.persist=MEMORY_ONLY
+          - --conf
+          - spark.cassandra.sql.fix.scan.equality=false
+          - --conf
+          - spark.sql.exchange.reuse=true
+          - --conf
+          - spark.sql.postPruneColumns=false
+        ports:
+          - containerPort: 4040
+            name: spark-ui
+            protocol: TCP
+          - containerPort: 10000
+            name: spark-thrift
+            protocol: TCP
+        volumeMounts:
+        - mountPath: /spark-log
+          name: spark-log-volume
+      serviceAccount: spark
+      serviceAccountName: spark
+  volumeClaimTemplates:
+  - metadata:
+      name: spark-log-volume
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi

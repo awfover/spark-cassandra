@@ -1,0 +1,59 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spark-sql
+  namespace: spark
+spec:
+  rules:
+    - host: history.spark.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: spark-sql
+                port:
+                  number: 18080
+    - host: spark.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: spark-sql
+                port:
+                  number: 10001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.3.0
+  name: spark-thrift
+  namespace: ingress-nginx
+spec:
+  ports:
+  - appProtocol: tcp
+    name: spark-thrift
+    port: 10000
+    protocol: TCP
+    targetPort: 10000
+  selector:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+  type: NodePort
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tcp-services
+  namespace: ingress-nginx
+data:
+  10000: "spark/spark-sql:10000"

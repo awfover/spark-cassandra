@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8ssandra-operator
+---
+apiVersion: v1
+data:
+  password: {PASSWORD}
+  username: ZGVtby1zdXBlcnVzZXI=
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: k8ssandra-operator
+    cassandra.datastax.com/watched: "true"
+    k8ssandra.io/cluster-name: demo
+    k8ssandra.io/cluster-namespace: k8ssandra-operator
+  name: demo-superuser
+  namespace: k8ssandra-operator
+type: Opaque
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark
+---
+apiVersion: v1
+data:
+  password: {PASSWORD}
+  username: ZGVtby1zdXBlcnVzZXI=
+kind: Secret
+metadata:
+  labels:
+    cassandra.datastax.com/watched: "true"
+    k8ssandra.io/cluster-namespace: spark
+  name: demo-superuser
+  namespace: spark
+type: Opaque
